@@ -1,0 +1,88 @@
+---
+- name: Start Elasticsearch
+  vars:
+    elasticsearch_base_env:
+      discovery.type: single-node
+      xpack.security.enabled: "true"
+      xpack.security.http.ssl.enabled: "false"  # traffic stays on the private Docker network / loopback
+      ELASTIC_PASSWORD: "{{ elastic_password }}"
+      ES_JAVA_OPTS: "-Xms{{ elasticsearch_heap }} -Xmx{{ elasticsearch_heap }}"
+  community.docker.docker_container:
+    name: elasticsearch
+    image: "{{ elasticsearch_image }}"
+    restart_policy: unless-stopped
+    env: "{{ elasticsearch_base_env | combine(elasticsearch_extra_env) }}"
+    ulimits: "{{ elasticsearch_ulimits }}"
+    volumes: ["esdata:/usr/share/elasticsearch/data"]
+    published_ports: ["{{ elasticsearch_bind_address }}:9200:9200"]
+    networks: [{ name: "{{ elk_network }}" }]
+    log_driver: json-file
+    log_options: { max-size: 10m, max-file: "3" }
+  no_log: true
+
+- name: Wait for the cluster to be healthy
+  ansible.builtin.uri:
+    url: "{{ elasticsearch_url }}/_cluster/health?wait_for_status=yellow&timeout=5s"
+    user: elastic
+    password: "{{ elastic_password }}"
+    force_basic_auth: true
+  register: elasticsearch_health
+  until: elasticsearch_health.status == 200
+  retries: 40
+  delay: 5
+  no_log: true
+
+- name: Set the kibana_system password
+  ansible.builtin.uri:
+    url: "{{ elasticsearch_url }}/_security/user/kibana_system/_password"
+    method: POST
+    user: elastic
+    password: "{{ elastic_password }}"
+    force_basic_auth: true
+    body_format: json
+    body: { password: "{{ kibana_system_password }}" }
+    timeout: 60
+  register: elasticsearch_kibana_pw
+  until: elasticsearch_kibana_pw.status == 200
+  retries: 10
+  delay: 6
+  changed_when: false
+  no_log: true
+
+- name: Create a least-privilege role for Logstash
+  ansible.builtin.uri:
+    url: "{{ elasticsearch_url }}/_security/role/logstash_writer"
+    method: PUT
+    user: elastic
+    password: "{{ elastic_password }}"
+    force_basic_auth: true
+    body_format: json
+    body:
+      cluster: [monitor]
+      indices:
+        - names: ["{{ logstash_index_prefix }}-*"]
+          privileges: [create, create_index, write, auto_configure]
+    timeout: 60
+  register: elasticsearch_ls_role
+  until: elasticsearch_ls_role.status == 200
+  retries: 10
+  delay: 6
+  changed_when: false
+  no_log: true
+
+- name: Create the logstash_writer user
+  ansible.builtin.uri:
+    url: "{{ elasticsearch_url }}/_security/user/logstash_writer"
+    method: PUT
+    user: elastic
+    password: "{{ elastic_password }}"
+    force_basic_auth: true
+    body_format: json
+    body: { password: "{{ logstash_writer_password }}", roles: [logstash_writer] }
+    timeout: 60
+  register: elasticsearch_ls_user
+  until: elasticsearch_ls_user.status == 200
+  retries: 10
+  delay: 6
+  changed_when: false
+  no_log: true

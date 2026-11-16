@@ -1,0 +1,51 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install "ansible>=11" ansible-lint yamllint
+      - run: yamllint .
+      - run: ansible-lint
+      - run: ansible-playbook -i inventory/local.yml site.yml verify.yml --syntax-check
+
+  deploy-and-verify:
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install "ansible>=11" requests
+      - name: Throwaway secrets for the CI deployment (never used outside this job)
+        run: |
+          cat > group_vars/all/vault.yml <<EOV
+          vault_elastic_password: "$(openssl rand -hex 16)"
+          vault_kibana_system_password: "$(openssl rand -hex 16)"
+          vault_logstash_writer_password: "$(openssl rand -hex 16)"
+          vault_kibana_encryption_key: "$(openssl rand -hex 32)"
+          EOV
+      - name: Deploy onto the runner
+        run: ansible-playbook -i inventory/local.yml site.yml -e ansible_python_interpreter=$(which python3)
+      - name: Idempotency — second run must report no changes
+        run: |
+          ansible-playbook -i inventory/local.yml site.yml -e ansible_python_interpreter=$(which python3) | tee second-run.log
+          grep -qE 'changed=0 .*failed=0' second-run.log
+      - name: End-to-end verification
+        run: ansible-playbook -i inventory/local.yml verify.yml -e ansible_python_interpreter=$(which python3)
+      - name: Container logs on failure
+        if: failure()
+        run: for c in elasticsearch kibana logstash nginx; do echo "== $c"; docker logs --tail 80 $c; done

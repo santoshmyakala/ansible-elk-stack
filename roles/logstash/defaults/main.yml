@@ -1,0 +1,3 @@
+---
+logstash_image: "logstash:{{ elk_version }}"
+logstash_pipeline_dir: "{{ elk_base_dir }}/logstash/pipeline"

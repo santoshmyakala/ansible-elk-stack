@@ -1,0 +1,7 @@
+---
+elasticsearch_image: "elasticsearch:{{ elk_version }}"
+elasticsearch_url: "http://{{ elasticsearch_bind_address }}:9200"
+# Elasticsearch needs a high open-file limit. Some sandboxed hosts forbid raising it; override with [] there.
+elasticsearch_ulimits: ["nofile:65535:65535"]
+# Additional Elasticsearch settings as environment variables, e.g. {"cluster.name": "logs"}.
+elasticsearch_extra_env: {}

@@ -1,0 +1,21 @@
+---
+elk_version: "9.5.5"
+elk_base_dir: /opt/elk
+elk_network: elk
+elk_server_name: "{{ inventory_hostname }}"
+
+elasticsearch_heap: 1g
+elasticsearch_bind_address: 127.0.0.1   # API reachable on the host only; containers use the Docker network
+
+logstash_beats_port: 5044
+logstash_tcp_json_port: 5000
+logstash_index_prefix: app-logs
+
+nginx_image: "nginx:1.29-alpine"
+nginx_cert_days: 365
+
+# Secrets: defined in group_vars/all/vault.yml, encrypted with ansible-vault.
+elastic_password: "{{ vault_elastic_password }}"
+kibana_system_password: "{{ vault_kibana_system_password }}"
+logstash_writer_password: "{{ vault_logstash_writer_password }}"
+kibana_encryption_key: "{{ vault_kibana_encryption_key }}"

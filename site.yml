@@ -1,0 +1,20 @@
+---
+- name: Deploy a secured Elastic Stack behind an Nginx TLS proxy
+  hosts: elk
+  become: true
+  pre_tasks:
+    - name: Check that secrets are defined
+      ansible.builtin.assert:
+        that:
+          - vault_elastic_password | default('') | length >= 12
+          - vault_kibana_system_password | default('') | length >= 12
+          - vault_logstash_writer_password | default('') | length >= 12
+          - vault_kibana_encryption_key | default('') | length >= 32
+        fail_msg: "Define strong secrets in group_vars/all/vault.yml (see vault.yml.example)."
+        quiet: true
+  roles:
+    - { role: docker_host, tags: [docker] }
+    - { role: elasticsearch, tags: [elasticsearch] }
+    - { role: kibana, tags: [kibana] }
+    - { role: logstash, tags: [logstash] }
+    - { role: nginx_proxy, tags: [nginx] }

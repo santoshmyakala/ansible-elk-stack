@@ -1,0 +1,54 @@
+---
+- name: Create Nginx directories
+  ansible.builtin.file:
+    path: "{{ nginx_proxy_dir }}/{{ item }}"
+    state: directory
+    mode: "0750"
+  loop: [conf.d, certs]
+
+- name: Generate a self-signed certificate
+  when: nginx_proxy_self_signed
+  block:
+    - name: Private key
+      community.crypto.openssl_privatekey:
+        path: "{{ nginx_proxy_dir }}/certs/kibana.key"
+        type: ECC
+        curve: secp384r1
+        mode: "0600"
+
+    - name: Certificate signing request
+      community.crypto.openssl_csr_pipe:
+        privatekey_path: "{{ nginx_proxy_dir }}/certs/kibana.key"
+        common_name: "{{ elk_server_name }}"
+        subject_alt_name: ["DNS:{{ elk_server_name }}", "DNS:localhost"]
+      register: nginx_proxy_csr
+      changed_when: false
+
+    - name: Self-signed certificate
+      community.crypto.x509_certificate:
+        path: "{{ nginx_proxy_dir }}/certs/kibana.crt"
+        csr_content: "{{ nginx_proxy_csr.csr }}"
+        privatekey_path: "{{ nginx_proxy_dir }}/certs/kibana.key"
+        provider: selfsigned
+        selfsigned_not_after: "+{{ nginx_cert_days }}d"
+        mode: "0644"
+
+- name: Render site configuration
+  ansible.builtin.template:
+    src: kibana.conf.j2
+    dest: "{{ nginx_proxy_dir }}/conf.d/default.conf"
+    mode: "0644"
+  notify: Reload Nginx
+
+- name: Start Nginx
+  community.docker.docker_container:
+    name: nginx
+    image: "{{ nginx_image }}"
+    restart_policy: unless-stopped
+    published_ports: ["80:80", "443:443"]
+    volumes:
+      - "{{ nginx_proxy_dir }}/conf.d:/etc/nginx/conf.d:ro"
+      - "{{ nginx_proxy_dir }}/certs:/etc/nginx/certs:ro"
+    networks: [{ name: "{{ elk_network }}" }]
+    log_driver: json-file
+    log_options: { max-size: 10m, max-file: "3" }

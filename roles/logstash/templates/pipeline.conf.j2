@@ -1,0 +1,20 @@
+# Managed by Ansible.
+input {
+  beats { port => {{ logstash_beats_port }} }
+  tcp   { port => {{ logstash_tcp_json_port }} codec => json_lines }
+}
+
+filter {
+  mutate { add_field => { "[pipeline][name]" => "main" } }
+}
+
+output {
+  elasticsearch {
+    hosts            => ["http://elasticsearch:9200"]
+    user             => "logstash_writer"
+    password         => "${LOGSTASH_WRITER_PASSWORD}"  # injected from the container environment
+    index            => "{{ logstash_index_prefix }}-%{+YYYY.MM.dd}"
+    data_stream      => false
+    manage_template  => false
+  }
+}

@@ -1,0 +1,7 @@
+---
+# Copy to vault.yml, set strong values, then encrypt:
+#   ansible-vault encrypt group_vars/all/vault.yml
+vault_elastic_password: "change-me"
+vault_kibana_system_password: "change-me"
+vault_logstash_writer_password: "change-me"
+vault_kibana_encryption_key: "at-least-32-characters-long-random-string"

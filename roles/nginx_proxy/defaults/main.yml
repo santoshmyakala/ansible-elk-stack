@@ -1,0 +1,5 @@
+---
+nginx_proxy_dir: "{{ elk_base_dir }}/nginx"
+# Provide your own certificate by placing kibana.crt / kibana.key in {{ nginx_proxy_dir }}/certs
+# and setting this to false.
+nginx_proxy_self_signed: true

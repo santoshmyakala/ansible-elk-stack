@@ -1,0 +1,31 @@
+---
+- name: Create pipeline directory
+  ansible.builtin.file:
+    path: "{{ logstash_pipeline_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Render pipeline
+  ansible.builtin.template:
+    src: pipeline.conf.j2
+    dest: "{{ logstash_pipeline_dir }}/main.conf"
+    mode: "0644"
+  notify: Restart Logstash
+
+- name: Start Logstash
+  community.docker.docker_container:
+    name: logstash
+    image: "{{ logstash_image }}"
+    restart_policy: unless-stopped
+    env:
+      LOGSTASH_WRITER_PASSWORD: "{{ logstash_writer_password }}"
+      XPACK_MONITORING_ENABLED: "false"
+      LS_JAVA_OPTS: "-Xms512m -Xmx512m"
+    volumes: ["{{ logstash_pipeline_dir }}:/usr/share/logstash/pipeline:ro"]
+    published_ports:
+      - "{{ logstash_beats_port }}:{{ logstash_beats_port }}"
+      - "{{ logstash_tcp_json_port }}:{{ logstash_tcp_json_port }}"
+    networks: [{ name: "{{ elk_network }}" }]
+    log_driver: json-file
+    log_options: { max-size: 10m, max-file: "3" }
+  no_log: true

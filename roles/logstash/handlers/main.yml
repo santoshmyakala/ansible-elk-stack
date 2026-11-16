@@ -1,0 +1,6 @@
+---
+- name: Restart Logstash
+  community.docker.docker_container:
+    name: logstash
+    restart: true
+    state: started

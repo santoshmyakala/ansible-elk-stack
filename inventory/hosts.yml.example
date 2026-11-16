@@ -1,0 +1,7 @@
+all:
+  children:
+    elk:
+      hosts:
+        elk01:
+          ansible_host: 10.0.10.15
+          ansible_user: ubuntu

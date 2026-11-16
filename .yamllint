@@ -1,0 +1,11 @@
+extends: default
+ignore: |
+  .github/
+rules:
+  line-length: { max: 140 }
+  truthy: { allowed-values: ["true", "false"] }
+  comments: { min-spaces-from-content: 1 }
+  braces: { max-spaces-inside: 1 }
+  document-start: disable
+  comments-indentation: false
+  octal-values: { forbid-implicit-octal: true, forbid-explicit-octal: true }

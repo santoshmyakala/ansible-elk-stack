@@ -1,0 +1,86 @@
+---
+# End-to-end checks: security is enforced, a log event flows Logstash -> Elasticsearch,
+# and Kibana is served over HTTPS through Nginx.
+- name: Verify the Elastic Stack deployment
+  hosts: elk
+  gather_facts: false
+  vars:
+    es: "http://{{ elasticsearch_bind_address }}:9200"
+  tasks:
+    # set_fact evaluates once; a templated var would be re-rendered (and change) on every use.
+    - name: Pick a unique marker for this run
+      ansible.builtin.set_fact:
+        marker: "verify-{{ lookup('ansible.builtin.password', '/dev/null', chars=['ascii_lowercase', 'digits'], length=12) }}"
+
+    - name: Anonymous requests to Elasticsearch are rejected
+      ansible.builtin.uri:
+        url: "{{ es }}"
+        status_code: 401
+
+    - name: Cluster is healthy
+      ansible.builtin.uri:
+        url: "{{ es }}/_cluster/health"
+        user: elastic
+        password: "{{ elastic_password }}"
+        force_basic_auth: true
+      register: verify_health
+      failed_when: verify_health.json.status not in ['green', 'yellow']
+      no_log: true
+
+    - name: Wait for Logstash to accept connections
+      ansible.builtin.wait_for:
+        port: "{{ logstash_tcp_json_port }}"
+        timeout: 300
+
+    - name: Send a JSON log event to Logstash
+      ansible.builtin.shell: |
+        set -o pipefail
+        for i in $(seq 1 30); do
+          echo '{"message":"{{ marker }}","service":"verify"}' > /dev/tcp/127.0.0.1/{{ logstash_tcp_json_port }} && exit 0
+          sleep 2
+        done
+        exit 1
+      args:
+        executable: /bin/bash
+      changed_when: false
+
+    - name: The event is indexed by the logstash_writer user
+      ansible.builtin.uri:
+        url: "{{ es }}/{{ logstash_index_prefix }}-*/_search"
+        method: POST
+        body_format: json
+        body: { query: { match_phrase: { message: "{{ marker }}" } } }
+        user: elastic
+        password: "{{ elastic_password }}"
+        force_basic_auth: true
+      register: verify_search
+      until: verify_search.status == 200 and verify_search.json.hits.total.value == 1
+      retries: 30
+      delay: 5
+      no_log: true
+
+    - name: HTTP redirects to HTTPS
+      ansible.builtin.uri:
+        url: http://127.0.0.1/
+        follow_redirects: none
+        status_code: 301
+
+    - name: Kibana is available over HTTPS
+      ansible.builtin.uri:
+        url: https://127.0.0.1/api/status
+        validate_certs: false   # self-signed certificate in test deployments
+        user: elastic
+        password: "{{ elastic_password }}"
+        force_basic_auth: true
+      register: verify_kibana
+      until: verify_kibana.status == 200 and verify_kibana.json.status.overall.level == 'available'
+      retries: 60
+      delay: 5
+      no_log: true
+
+    - name: Summary
+      ansible.builtin.debug:
+        msg:
+          - "Elasticsearch: {{ verify_health.json.status }}"
+          - "Events indexed with marker: {{ verify_search.json.hits.total.value }}"
+          - "Kibana: {{ verify_kibana.json.status.overall.level }}"

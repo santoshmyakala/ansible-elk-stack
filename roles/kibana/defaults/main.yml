@@ -1,0 +1,2 @@
+---
+kibana_image: "kibana:{{ elk_version }}"

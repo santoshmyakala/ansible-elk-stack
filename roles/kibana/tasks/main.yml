@@ -1,0 +1,18 @@
+---
+- name: Start Kibana (not published; reached through the Nginx proxy)
+  community.docker.docker_container:
+    name: kibana
+    image: "{{ kibana_image }}"
+    restart_policy: unless-stopped
+    env:
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+      ELASTICSEARCH_USERNAME: kibana_system
+      ELASTICSEARCH_PASSWORD: "{{ kibana_system_password }}"
+      SERVER_PUBLICBASEURL: "https://{{ elk_server_name }}"
+      XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY: "{{ kibana_encryption_key }}"
+      XPACK_SECURITY_ENCRYPTIONKEY: "{{ kibana_encryption_key }}"
+      XPACK_REPORTING_ENCRYPTIONKEY: "{{ kibana_encryption_key }}"
+    networks: [{ name: "{{ elk_network }}" }]
+    log_driver: json-file
+    log_options: { max-size: 10m, max-file: "3" }
+  no_log: true
