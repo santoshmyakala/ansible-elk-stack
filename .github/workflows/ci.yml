@@ -39,13 +39,13 @@ jobs:
           vault_kibana_encryption_key: "$(openssl rand -hex 32)"
           EOV
       - name: Deploy onto the runner
-        run: ansible-playbook -i inventory/local.yml site.yml -e ansible_python_interpreter=$(which python3)
+        run: ansible-playbook -i inventory/local.yml site.yml -e "ansible_python_interpreter=$(which python3)"
       - name: Idempotency — second run must report no changes
         run: |
-          ansible-playbook -i inventory/local.yml site.yml -e ansible_python_interpreter=$(which python3) | tee second-run.log
+          ansible-playbook -i inventory/local.yml site.yml -e "ansible_python_interpreter=$(which python3)" | tee second-run.log
           grep -qE 'changed=0 .*failed=0' second-run.log
       - name: End-to-end verification
-        run: ansible-playbook -i inventory/local.yml verify.yml -e ansible_python_interpreter=$(which python3)
+        run: ansible-playbook -i inventory/local.yml verify.yml -e "ansible_python_interpreter=$(which python3)"
       - name: Container logs on failure
         if: failure()
         run: for c in elasticsearch kibana logstash nginx; do echo "== $c"; docker logs --tail 80 $c; done
