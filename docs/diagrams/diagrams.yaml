@@ -1,0 +1,25 @@
+- out: architecture
+  title: Secured Elastic Stack 9 — deployed by Ansible
+  subtitle: Security on, TLS at the edge, least-privilege writer; Elasticsearch is reachable only from the host
+  grid: {dx: 220, dy: 160}
+  groups:
+    - {id: net, label: "Docker network: elk", icon: docker, color: blue, box: [1, 0, 3, 1.5]}
+  nodes:
+    - {id: apps, label: Applications, sub: Beats · JSON lines, icon: server, at: [0, 0], color: gray, stack: true}
+    - {id: analyst, label: Analyst, sub: browser, icon: user, at: [0, 1.5], color: gray}
+    - {id: ls, label: Logstash, sub: ":5044 · :5000", icon: logstash, at: [1, 0], color: orange}
+    - {id: es, label: Elasticsearch, sub: security on · app-logs-*, icon: elasticsearch, at: [3, 0.75], color: teal, pulse: true}
+    - {id: nginx, label: Nginx, sub: TLS · HSTS · :443, icon: nginx, at: [1, 1.5], color: green}
+    - {id: kb, label: Kibana, sub: ":5601 internal", icon: kibana, at: [2, 1.5], color: purple}
+    - {id: ops, label: Operator on host, sub: 127.0.0.1:9200, icon: terminal, at: [3, 2.6], color: gray}
+    - {id: ansible, label: Ansible, sub: roles · verify playbook, icon: ansible, at: [1.5, 2.6], color: red}
+    - {id: internet, label: Internet, sub: direct :9200, icon: internet, at: [4.15, 0.75], color: gray}
+  edges:
+    - {from: apps, to: ls, label: Beats, kind: data, packet: doc}
+    - {from: ls, to: es, label: logstash_writer, kind: secure, packet: doc}
+    - {from: analyst, to: nginx, label: HTTPS, kind: secure}
+    - {from: nginx, to: kb, kind: data}
+    - {from: kb, to: es, label: kibana_system, kind: secure}
+    - {from: ops, to: es, label: localhost only, kind: secure, at: 0.35}
+    - {from: ansible, to: net, label: deploy + verify, kind: control, at: 0.45}
+    - {from: internet, to: es, kind: deny}

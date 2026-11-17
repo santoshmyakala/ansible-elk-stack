@@ -16,22 +16,12 @@ Ansible roles that deploy a **centralised logging stack** onto a Docker host. Se
 
 ## Architecture
 
-```mermaid
-flowchart LR
-  apps([Applications / Beats]) -->|Beats :5044<br/>JSON lines :5000| ls[Logstash]
-  ls -->|logstash_writer<br/>app-logs-*| es[(Elasticsearch<br/>security on)]
-  user([Analyst]) -->|HTTPS :443| nginx[Nginx<br/>TLS · HSTS]
-  user -.->|HTTP :80 → 301| nginx
-  nginx -->|kibana:5601| kb[Kibana]
-  kb -->|kibana_system| es
-  ops([Operator on host]) -->|127.0.0.1:9200| es
-  subgraph docker["Docker network: elk"]
-    ls
-    es
-    kb
-    nginx
-  end
-```
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/diagrams/architecture-dark.svg">
+  <img alt="Elastic Stack on a Docker network deployed by Ansible: applications ship logs via Beats to Logstash, which writes to Elasticsearch as logstash_writer; analysts reach Kibana through Nginx with TLS and HSTS; Kibana authenticates as kibana_system; operators reach Elasticsearch only on localhost; direct internet access to port 9200 is blocked." src="docs/diagrams/architecture-light.svg" width="100%">
+</picture>
+
+<sub>Animated diagram generated from <a href="docs/diagrams">docs/diagrams/*.yaml</a> with <a href="https://github.com/santoshmyakala/santoshmyakala/tree/main/tools/archdiagram">archdiagram</a>.</sub>
 
 | Component | Exposure | Identity |
 |---|---|---|
