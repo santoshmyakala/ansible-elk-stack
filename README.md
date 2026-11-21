@@ -21,8 +21,6 @@ Ansible roles that deploy a **centralised logging stack** onto a Docker host. Se
   <img alt="Elastic Stack on a Docker network deployed by Ansible: applications ship logs via Beats to Logstash, which writes to Elasticsearch as logstash_writer; analysts reach Kibana through Nginx with TLS and HSTS; Kibana authenticates as kibana_system; operators reach Elasticsearch only on localhost; direct internet access to port 9200 is blocked." src="docs/diagrams/architecture-light.svg" width="100%">
 </picture>
 
-<sub>Animated diagram generated from <a href="docs/diagrams">docs/diagrams/*.yaml</a> with <a href="https://github.com/santoshmyakala/santoshmyakala/tree/main/tools/archdiagram">archdiagram</a>.</sub>
-
 | Component | Exposure | Identity |
 |---|---|---|
 | Elasticsearch | `127.0.0.1:9200` on the host, plus the Docker network | `elastic` (bootstrap/admin only) |
