@@ -27,10 +27,15 @@
       failed_when: verify_health.json.status not in ['green', 'yellow']
       no_log: true
 
-    - name: Wait for Logstash to accept connections
-      ansible.builtin.wait_for:
-        port: "{{ logstash_tcp_json_port }}"
-        timeout: 300
+    # Docker's port proxy accepts connections before Logstash listens, so an open port proves nothing:
+    # wait until Logstash itself reports its pipeline healthy.
+    - name: Wait until the Logstash pipeline is running
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ logstash_api_port }}/_health_report"
+      register: verify_logstash
+      until: verify_logstash.status == 200 and verify_logstash.json.status == 'green'
+      retries: 60
+      delay: 5
 
     - name: Send a JSON log event to Logstash
       ansible.builtin.shell: |

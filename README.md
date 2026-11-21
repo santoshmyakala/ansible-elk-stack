@@ -25,7 +25,7 @@ Ansible roles that deploy a **centralised logging stack** onto a Docker host. Se
 |---|---|---|
 | Elasticsearch | `127.0.0.1:9200` on the host, plus the Docker network | `elastic` (bootstrap/admin only) |
 | Kibana | Docker network only; reached through Nginx | `kibana_system` |
-| Logstash | `:5044` (Beats), `:5000` (JSON lines) | `logstash_writer`: `create`, `create_index`, `write`, `auto_configure` on `app-logs-*` only |
+| Logstash | `:5044` (Beats), `:5000` (JSON lines); monitoring API `127.0.0.1:9600` (loopback only) | `logstash_writer`: `create`, `create_index`, `write`, `auto_configure` on `app-logs-*` only |
 | Nginx | `:80` (redirect), `:443` (TLS 1.2/1.3) | — |
 
 ## Roles

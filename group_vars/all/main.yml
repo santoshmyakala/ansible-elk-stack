@@ -9,6 +9,7 @@ elasticsearch_bind_address: 127.0.0.1   # API reachable on the host only; contai
 
 logstash_beats_port: 5044
 logstash_tcp_json_port: 5000
+logstash_api_port: 9600            # monitoring API, published on 127.0.0.1 only
 logstash_index_prefix: app-logs
 
 nginx_image: "nginx:1.29-alpine"
